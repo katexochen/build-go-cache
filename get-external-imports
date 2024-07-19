@@ -2,11 +2,13 @@
 set -eu -o pipefail
 
 if [[  $# -lt 2 ]]; then
-  echo "Usage: $0 moduledir imported-packages" >&2
+  echo "Usage: $0 moduledir imported-packages [Go flags]..." >&2
   exit 1
 fi
 moduledir="$1"
 imported_packages="$(realpath "$2")"
+shift 2
+go_flags=("$@")
 
 # use a while loop
 if [ ! -f "$moduledir/go.mod" ]; then
@@ -15,6 +17,6 @@ if [ ! -f "$moduledir/go.mod" ]; then
 fi
 modname=$(awk '/^module / {print $2; exit}' "$moduledir/go.mod")
 cd "$moduledir"
-go list -f '{{ join .Imports "\n" }}{{ if .TestImports}}
+go list "${go_flags[@]}" -f '{{ if .Imports }}{{ join .Imports "\n" }}{{ end}}{{ if .TestImports}}
 {{ join .TestImports "\n" }}{{ end }}{{ if .XTestImports}}
 {{ join .XTestImports "\n" }}{{ end }}' "./..." | LC_ALL=C sort -u | grep -v "$modname" | grep -Ev '^C$' > "$imported_packages"
